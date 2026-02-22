@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Морской бой — улучшенная версия</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            min-height: 100vh;
+            background: #0b0e14;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 16px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Анимация волн на фоне - более естественная */
+        .ocean-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(180deg, #0a1a2a 0%, #0d2b3e 30%, #123b4e 70%, #0a2a3a 100%);
+            overflow: hidden;
+        }
+
+        .wave {
+            position: absolute;
+            width: 200%;
+            height: 250px;
+            background: linear-gradient(90deg, transparent, rgba(64, 164, 204, 0.15), rgba(100, 200, 240, 0.2), rgba(64, 164, 204, 0.15), transparent);
+            top: 70%;
+            left: -50%;
+            border-radius: 40%;
+            animation: waveFlow 18s infinite linear;
+            transform-origin: center;
+            filter: blur(3px);
+        }
+
+        .wave:nth-child(2) {
+            top: 60%;
+            height: 200px;
+            background: linear-gradient(90deg, transparent, rgba(84, 184, 224, 0.2), rgba(120, 220, 255, 0.25), rgba(84, 184, 224, 0.2), transparent);
+            animation: waveFlow 14s infinite reverse;
+            opacity: 0.6;
+            filter: blur(4px);
+        }
+
+        .wave:nth-child(3) {
+            top: 65%;
+            height: 300px;
+            background: linear-gradient(90deg, transparent, rgba(44, 144, 184, 0.1), rgba(80, 180, 220, 0.15), rgba(44, 144, 184, 0.1), transparent);
+            animation: waveFlow 22s infinite ease-in-out;
+            opacity: 0.5;
+            filter: blur(5px);
+        }
+
+        @keyframes waveFlow {
+            0% {
+                transform: rotate(0deg) translateX(0) translateY(0) scale(1);
+            }
+            25% {
+                transform: rotate(2deg) translateX(5%) translateY(-10px) scale(1.02);
+            }
+            50% {
+                transform: rotate(0deg) translateX(10%) translateY(0) scale(1);
+            }
+            75% {
+                transform: rotate(-2deg) translateX(5%) translateY(10px) scale(0.98);
+            }
+            100% {
+                transform: rotate(0deg) translateX(0) translateY(0) scale(1);
+            }
+        }
+
+        /* Мелкая рябь */
+        .ripple {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, transparent 0%, rgba(255,255,255,0.02) 100%);
+            animation: ripplePulse 8s infinite;
+        }
+
+        @keyframes ripplePulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+
+        .game-container {
+            background: rgba(30, 36, 48, 0.92);
+            backdrop-filter: blur(12px);
+            border-radius: 42px;
+            padding: 30px 30px 40px;
+            box-shadow: 0 25px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px #3a4050 inset;
+            max-width: 1400px;
+            width: fit-content;
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
+            z-index: 1;
+            position: relative;
+            border: 1px solid rgba(100, 150, 200, 0.2);
+        }
+
+        .game-container:hover {
+            box-shadow: 0 30px 50px rgba(0, 20, 40, 0.8), 0 0 0 1px #5a7080 inset;
+        }
+
+        h1 {
+            text-align: center;
+            font-weight: 400;
+            font-size: 2.4rem;
+            letter-spacing: 3px;
+            margin-top: 0;
+            margin-bottom: 28px;
+            color: #d9e0ee;
+            text-shadow: 0 4px 8px #00000040, 0 0 0 1px #5f6b7c;
+        }
+
+        .boards-row {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 40px 80px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .board-wrapper {
+            text-align: center;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        .board-wrapper:hover {
+            transform: scale(1.02) translateY(-5px);
+        }
+
+        .board-label {
+            color: #aebacf;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-bottom: 1px dashed #4e5a6e;
+            padding-bottom: 6px;
+            display: inline-block;
+            position: relative;
+        }
+
+        .board-label::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #7f90af, transparent);
+            animation: labelShine 3s infinite;
+        }
+
+        @keyframes labelShine {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .board-with-coords {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .coords-row {
+            display: flex;
+            margin-left: 40px;
+            margin-bottom: 8px;
+        }
+
+        .coord-cell {
+            width: 48px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8f9eb5;
+            font-size: 1.2rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 2px 4px black;
+        }
+
+        .grid-container {
+            display: flex;
+            flex-direction: row;
+        }
+
+        .coords-left {
+            display: flex;
+            flex-direction: column;
+            margin-right: 8px;
+            margin-top: 0;
+        }
+
+        .coord-left-cell {
+            width: 40px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8f9eb5;
+            font-size: 1.2rem;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 2px 4px black;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 48px);
+            grid-template-rows: repeat(10, 48px);
+            gap: 6px;
+            background: rgba(43, 50, 64, 0.85);
+            padding: 18px;
+            border-radius: 28px;
+            box-shadow: inset 0 3px 8px #00000080, 0 10px 15px -8px black, 0 0 0 1px #3a4a5a inset;
+            backdrop-filter: blur(2px);
+        }
+
+        .cell {
+            background: #333d4f;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px #00000060, 0 0 0 1px #4f5b70 inset, 0 0 0 2px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: 500;
+            color: white;
+            transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.5);
+            user-select: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cell::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .cell:hover::before {
+            left: 100%;
+        }
+
+        .cell:active {
+            transform: scale(0.85) rotate(1deg);
+            background: #4a566e;
+            box-shadow: 0 1px 2px black, 0 0 0 2px #7b8baa inset;
+        }
+
+        .cell:hover {
+            background: #3f4b61;
+            box-shadow: 0 3px 6px black, 0 0 0 2px #6c7c9a inset;
+            transform: scale(1.05);
+        }
+
+        .cell.ship {
+            background: linear-gradient(145deg, #5a6e94, #4a5e84);
+            box-shadow: 0 0 0 2px #aab9d6 inset, 0 3px 6px black;
+            color: #eef3ff;
+        }
+
+        /* Упрощенная анимация попадания - просто красный цвет */
+        .cell.hit {
+            background: #b53b3b;
+            box-shadow: 0 0 0 2px #ffa36b inset, 0 4px 8px black;
+            color: white;
+        }
+
+        .cell.hit::after {
+            content: "✸";
+            transform: scale(1.2);
+            display: block;
+            filter: drop-shadow(0 2px 2px black);
+        }
+
+        /* Упрощенная анимация промаха */
+        .cell.miss {
+            background: #2a313f;
+            box-shadow: 0 0 0 2px #5c6475 inset;
+            color: #7e8ba0;
+        }
+
+        .cell.miss::after {
+            content: "•";
+            font-size: 3rem;
+            line-height: 0.5;
+            opacity: 0.7;
+        }
+
+        .cell.placing-valid {
+            background: linear-gradient(145deg, #3f6e5f, #2f5e4f);
+            box-shadow: 0 0 0 3px #8fcfaf inset;
+            animation: validPulse 1.5s infinite;
+        }
+
+        @keyframes validPulse {
+            0%, 100% { background: #3f6e5f; }
+            50% { background: #4f8e7f; }
+        }
+
+        .cell.placing-invalid {
+            background: linear-gradient(145deg, #6e3f3f, #5e2f2f);
+            box-shadow: 0 0 0 3px #cf8f8f inset;
+            animation: invalidShake 0.5s infinite;
+        }
+
+        @keyframes invalidShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-3px); }
+            40% { transform: translateX(3px); }
+            60% { transform: translateX(-2px); }
+            80% { transform: translateX(2px); }
+        }
+
+        .board-computer .cell.ship:not(.hit):not(.miss) {
+            background: #333d4f;
+            box-shadow: 0 2px 4px #00000060, 0 0 0 1px #4f5b70 inset;
+            color: transparent;
+        }
+
+        .control-panel {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 25px 35px;
+            margin-top: 25px;
+        }
+
+        .status {
+            background: rgba(38, 46, 60, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 80px;
+            padding: 16px 40px;
+            font-size: 1.3rem;
+            font-weight: 400;
+            color: #cbd5e6;
+            box-shadow: inset 0 2px 5px #000000b0, 0 8px 12px -6px #000000, 0 0 0 1px #4b576b;
+            min-width: 380px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(100, 150, 200, 0.3);
+        }
+
+        button {
+            background: linear-gradient(145deg, #2f384b, #1f283b);
+            border: none;
+            border-radius: 60px;
+            padding: 14px 42px;
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: #eef3fc;
+            letter-spacing: 0.8px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #12161f, 0 10px 20px -5px #000000d0, 0 0 0 1px #5f6e88;
+            transition: all 0.15s cubic-bezier(0.2, 0.9, 0.4, 1.5);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:active {
+            transform: translateY(5px) scale(0.97);
+            box-shadow: 0 2px 0 #12161f, 0 8px 16px -5px black, 0 0 0 1px #7f90af;
+            background: #3c465c;
+        }
+
+        button:hover {
+            background: linear-gradient(145deg, #3f4b63, #2f3b53);
+            box-shadow: 0 7px 0 #12161f, 0 14px 22px -5px black, 0 0 0 1px #7f90af;
+            border-color: #7f90af;
+            transform: translateY(-2px);
+        }
+
+        /* Панель расстановки с цветом #367a8a */
+        .placement-panel {
+            background: rgba(54, 122, 138, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 30px;
+            padding: 20px 30px;
+            margin: 0 auto 20px;
+            max-width: 1200px;
+            border: 1px solid rgba(100, 200, 220, 0.5);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 20px 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px #4a8a9a;
+            animation: panelFloat 4s infinite;
+        }
+
+        @keyframes panelFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .ship-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #ffffff;
+            font-size: 1.1rem;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 40px;
+            text-shadow: 0 2px 4px black;
+        }
+
+        .difficulty-selector {
+            display: flex;
+            gap: 10px;
+            background: #1e3a4a;
+            padding: 8px;
+            border-radius: 50px;
+            border: 1px solid #4a8a9a;
+        }
+
+        .difficulty-btn {
+            padding: 8px 24px;
+            border-radius: 40px;
+            background: transparent;
+            color: #e0e0e0;
+            border: 1px solid #4a8a9a;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .difficulty-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .difficulty-btn:hover::before {
+            width: 150px;
+            height: 150px;
+        }
+
+        .difficulty-btn.active {
+            background: #2a5a6a;
+            color: white;
+            border-color: #6aaabf;
+            box-shadow: inset 0 2px 4px black;
+        }
+
+        .difficulty-btn.easy:hover:not(.active) { background: #2a5a4a; }
+        .difficulty-btn.medium:hover:not(.active) { background: #2a5a6a; }
+        .difficulty-btn.hard:hover:not(.active) { background: #5a3f3f; }
+
+        .orientation-toggle {
+            display: flex;
+            gap: 10px;
+            background: #1e3a4a;
+            padding: 8px;
+            border-radius: 50px;
+            border: 1px solid #4a8a9a;
+        }
+
+        .orientation-btn {
+            padding: 8px 24px;
+            border-radius: 40px;
+            background: transparent;
+            color: #e0e0e0;
+            border: 1px solid #4a8a9a;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .orientation-btn.active {
+            background: #2a5a6a;
+            color: white;
+            border-color: #6aaabf;
+            box-shadow: inset 0 2px 4px black;
+        }
+
+        .orientation-btn:hover:not(.active) {
+            background: #2a4a5a;
+            transform: scale(1.05);
+        }
+
+        #randomPlacementBtn, #startGameBtn {
+            background: #1e4a5a;
+            box-shadow: 0 6px 0 #0a2a3a;
+        }
+
+        #startGameBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 6px 0 #0a2a3a;
+        }
+
+        #startGameBtn:disabled:hover {
+            background: #1e4a5a;
+            transform: none;
+            box-shadow: 0 6px 0 #0a2a3a;
+        }
+
+        .reset-placement-btn {
+            background: #4a3f3f !important;
+            box-shadow: 0 4px 0 #2a1f1f !important;
+            padding: 8px 24px;
+            font-size: 1rem;
+        }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 25px;
+            color: #8a95ab;
+            font-size: 0.95rem;
+            text-shadow: 0 2px 4px black;
+        }
+
+        .message-history {
+            background: rgba(26, 31, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 15px 20px;
+            margin: 20px auto 0;
+            max-width: 800px;
+            border: 1px solid rgba(100, 150, 200, 0.3);
+            box-shadow: inset 0 2px 5px #00000060, 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .message-history h3 {
+            color: #9aabb5;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            font-weight: 300;
+            text-shadow: 0 2px 4px black;
+        }
+
+        #messageLog {
+            color: #c7d3e9;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            max-height: 80px;
+            overflow-y: auto;
+            padding-right: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: #6a7a90 #262e3c;
+        }
+
+        #messageLog::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #messageLog::-webkit-scrollbar-track {
+            background: #262e3c;
+            border-radius: 10px;
+        }
+
+        #messageLog::-webkit-scrollbar-thumb {
+            background: #6a7a90;
+            border-radius: 10px;
+            border: 1px solid #8a9ab0;
+        }
+
+        .message-entry {
+            border-bottom: 1px dashed #4a5a6a;
+            padding: 4px 0;
+            animation: messageSlide 0.3s ease-out;
+        }
+
+        @keyframes messageSlide {
+            0% { opacity: 0; transform: translateX(-20px); }
+            100% { opacity: 1; transform: translateX(0); }
+        }
+
+        .turn-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 10px;
+            animation: turnPulse 1.2s infinite;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .turn-indicator.player {
+            background: #4fcf4f;
+            color: #4fcf4f;
+        }
+
+        .turn-indicator.bot {
+            background: #cf4f4f;
+            color: #cf4f4f;
+        }
+
+        @keyframes turnPulse {
+            0%, 100% { 
+                transform: scale(1); 
+                opacity: 1;
+            }
+            50% { 
+                transform: scale(1.2); 
+                opacity: 0.8;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Анимированный фон с волнами -->
+    <div class="ocean-bg">
+        <div class="wave"></div>
+        <div class="wave"></div>
+        <div class="wave"></div>
+        <div class="ripple"></div>
+    </div>
+
+    <div class="game-container">
+        <h1>🚢 морской бой</h1>
+        
+        <!-- Панель расстановки с цветом #367a8a -->
+        <div id="placementPanel" class="placement-panel">
+            <div class="ship-info">
+                <span>Осталось кораблей:</span>
+                <div id="shipsLeft">3️⃣ 3️⃣ 2️⃣ 2️⃣ 2️⃣ 1️⃣ 1️⃣ 1️⃣ 1️⃣</div>
+            </div>
+
+            <!-- Выбор сложности -->
+            <div class="difficulty-selector">
+                <button id="difficultyEasy" class="difficulty-btn easy">🌊 Легкий</button>
+                <button id="difficultyMedium" class="difficulty-btn medium active">🌊 Средний</button>
+                <button id="difficultyHard" class="difficulty-btn hard">🌊 Сложный</button>
+            </div>
+
+            <div class="orientation-toggle">
+                <button id="horizontalBtn" class="orientation-btn active">↔️ Горизонт.</button>
+                <button id="verticalBtn" class="orientation-btn">↕️ Вертикаль</button>
+            </div>
+            <button id="randomPlacementBtn">🎲 Случайно</button>
+            <button id="resetPlacementBtn" class="reset-placement-btn">🔄 Сброс расстановки</button>
+            <button id="startGameBtn" disabled>⚔️ Начать битву</button>
+        </div>
+
+        <div class="boards-row">
+            <!-- Доска игрока (слева) -->
+            <div class="board-wrapper">
+                <div class="board-label">
+                    ⚓ ваша эскадра
+                    <span id="playerTurnIndicator" class="turn-indicator player" style="display: none;"></span>
+                </div>
+                <div class="board-with-coords">
+                    <div class="coords-row">
+                        <div class="coord-cell"></div>
+                        <div class="coord-cell">А</div>
+                        <div class="coord-cell">Б</div>
+                        <div class="coord-cell">В</div>
+                        <div class="coord-cell">Г</div>
+                        <div class="coord-cell">Д</div>
+                        <div class="coord-cell">Е</div>
+                        <div class="coord-cell">Ж</div>
+                        <div class="coord-cell">З</div>
+                        <div class="coord-cell">И</div>
+                        <div class="coord-cell">К</div>
+                    </div>
+                    <div class="grid-container">
+                        <div class="coords-left">
+                            <div class="coord-left-cell">1</div>
+                            <div class="coord-left-cell">2</div>
+                            <div class="coord-left-cell">3</div>
+                            <div class="coord-left-cell">4</div>
+                            <div class="coord-left-cell">5</div>
+                            <div class="coord-left-cell">6</div>
+                            <div class="coord-left-cell">7</div>
+                            <div class="coord-left-cell">8</div>
+                            <div class="coord-left-cell">9</div>
+                            <div class="coord-left-cell">10</div>
+                        </div>
+                        <div id="player-board" class="grid board-player"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Доска компьютера (справа) -->
+            <div class="board-wrapper">
+                <div class="board-label">
+                    ☠️ флот врага
+                    <span id="botTurnIndicator" class="turn-indicator bot" style="display: none;"></span>
+                </div>
+                <div class="board-with-coords">
+                    <div class="coords-row">
+                        <div class="coord-cell"></div>
+                        <div class="coord-cell">А</div>
+                        <div class="coord-cell">Б</div>
+                        <div class="coord-cell">В</div>
+                        <div class="coord-cell">Г</div>
+                        <div class="coord-cell">Д</div>
+                        <div class="coord-cell">Е</div>
+                        <div class="coord-cell">Ж</div>
+                        <div class="coord-cell">З</div>
+                        <div class="coord-cell">И</div>
+                        <div class="coord-cell">К</div>
+                    </div>
+                    <div class="grid-container">
+                        <div class="coords-left">
+                            <div class="coord-left-cell">1</div>
+                            <div class="coord-left-cell">2</div>
+                            <div class="coord-left-cell">3</div>
+                            <div class="coord-left-cell">4</div>
+                            <div class="coord-left-cell">5</div>
+                            <div class="coord-left-cell">6</div>
+                            <div class="coord-left-cell">7</div>
+                            <div class="coord-left-cell">8</div>
+                            <div class="coord-left-cell">9</div>
+                            <div class="coord-left-cell">10</div>
+                        </div>
+                        <div id="computer-board" class="grid board-computer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Панель состояния -->
+        <div class="control-panel">
+            <div id="statusMessage" class="status">⚓ Поставьте четырёхпалубный корабль</div>
+            <button id="resetGameBtn" class="btn-reset">🔄 Новая битва</button>
+        </div>
+
+        <!-- История сообщений -->
+        <div class="message-history">
+            <h3>📟 бортовой журнал</h3>
+            <div id="messageLog"></div>
+        </div>
+
+        <div class="footer-note">· нажимай на свою доску чтобы поставить корабли · бот имеет 3 уровня сложности ·</div>
+    </div>
+
+    <script>
+        (function() {
+            const BOARD_SIZE = 10;
+            const SHIP_SIZES = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1];
+            
+            // Состояние игры
+            let playerBoard = [];
+            let computerBoard = [];
+            let playerTurn = true;
+            let gameOver = false;
+            let isPlacingMode = true;
+            let currentShipIndex = 0;
+            let currentOrientation = 'horizontal';
+            let difficulty = 'medium'; // easy, medium, hard
+            
+            // Для умного бота
+            let botTargetStack = [];
+            let botLastHit = null;
+            let botCurrentDirection = null;
+            
+            // DOM элементы
+            const playerBoardEl = document.getElementById('player-board');
+            const computerBoardEl = document.getElementById('computer-board');
+            const statusEl = document.getElementById('statusMessage');
+            const messageLogEl = document.getElementById('messageLog');
+            const resetBtn = document.getElementById('resetGameBtn');
+            const placementPanel = document.getElementById('placementPanel');
+            const shipsLeftDiv = document.getElementById('shipsLeft');
+            const horizontalBtn = document.getElementById('horizontalBtn');
+            const verticalBtn = document.getElementById('verticalBtn');
+            const randomPlacementBtn = document.getElementById('randomPlacementBtn');
+            const resetPlacementBtn = document.getElementById('resetPlacementBtn');
+            const startGameBtn = document.getElementById('startGameBtn');
+            
+            // Кнопки сложности
+            const difficultyEasy = document.getElementById('difficultyEasy');
+            const difficultyMedium = document.getElementById('difficultyMedium');
+            const difficultyHard = document.getElementById('difficultyHard');
+            
+            // Индикаторы хода
+            const playerTurnIndicator = document.getElementById('playerTurnIndicator');
+            const botTurnIndicator = document.getElementById('botTurnIndicator');
+            
+            // История сообщений
+            let messageHistory = [];
+            
+            // Инициализация пустых досок
+            function initBoards() {
+                playerBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill('empty'));
+                computerBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill('empty'));
+            }
+            initBoards();
+            
+            function addMessage(text) {
+                const timestamp = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const formattedMsg = `[${timestamp}] ${text}`;
+                
+                messageHistory.unshift(formattedMsg);
+                if (messageHistory.length > 5) {
+                    messageHistory.pop();
+                }
+                
+                messageLogEl.innerHTML = messageHistory.map(msg => 
+                    `<div class="message-entry">${msg}</div>`
+                ).join('');
+                
+                messageLogEl.scrollTop = 0;
+            }
+            
+            function updateTurnIndicators() {
+                if (!isPlacingMode && !gameOver) {
+                    playerTurnIndicator.style.display = playerTurn ? 'inline-block' : 'none';
+                    botTurnIndicator.style.display = !playerTurn ? 'inline-block' : 'none';
+                } else {
+                    playerTurnIndicator.style.display = 'none';
+                    botTurnIndicator.style.display = 'none';
+                }
+            }
+            
+            function canPlaceShip(board, row, col, size, orientation) {
+                if (orientation === 'horizontal') {
+                    if (col + size > BOARD_SIZE) return false;
+                    for (let i = 0; i < size; i++) {
+                        for (let dr = -1; dr <= 1; dr++) {
+                            for (let dc = -1; dc <= 1; dc++) {
+                                const r = row + dr;
+                                const c = col + i + dc;
+                                if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                                    if (board[r][c] === 'ship') return false;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    if (row + size > BOARD_SIZE) return false;
+                    for (let i = 0; i < size; i++) {
+                        for (let dr = -1; dr <= 1; dr++) {
+                            for (let dc = -1; dc <= 1; dc++) {
+                                const r = row + i + dr;
+                                const c = col + dc;
+                                if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                                    if (board[r][c] === 'ship') return false;
+                                }
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+            
+            function placeShip(board, row, col, size, orientation) {
+                if (orientation === 'horizontal') {
+                    for (let i = 0; i < size; i++) {
+                        board[row][col + i] = 'ship';
+                    }
+                } else {
+                    for (let i = 0; i < size; i++) {
+                        board[row + i][col] = 'ship';
+                    }
+                }
+            }
+            
+            function updateShipsLeft() {
+                if (currentShipIndex >= SHIP_SIZES.length) {
+                    shipsLeftDiv.textContent = '✅ Все корабли расставлены!';
+                    startGameBtn.disabled = false;
+                    statusEl.innerText = '⚓ Все корабли расставлены! Нажмите "Начать битву"';
+                } else {
+                    const remaining = SHIP_SIZES.slice(currentShipIndex);
+                    const display = remaining.map(size => {
+                        const symbols = {4: '4️⃣', 3: '3️⃣', 2: '2️⃣', 1: '1️⃣'};
+                        return symbols[size];
+                    }).join(' ');
+                    shipsLeftDiv.textContent = display;
+                    startGameBtn.disabled = true;
+                    
+                    // Измененный текст - вместо "Расставьте" используем "Поставьте"
+                    const sizeText = {
+                        4: 'четырёхпалубный',
+                        3: 'трёхпалубный',
+                        2: 'двухпалубный',
+                        1: 'однопалубный'
+                    };
+                    statusEl.innerText = `⚓ Поставьте ${sizeText[SHIP_SIZES[currentShipIndex]]} корабль`;
+                }
+            }
+            
+            function clearHighlights() {
+                const cells = playerBoardEl.querySelectorAll('.cell');
+                cells.forEach(cell => {
+                    cell.classList.remove('placing-valid', 'placing-invalid');
+                });
+            }
+            
+            function highlightOnHover(row, col) {
+                clearHighlights();
+                
+                if (currentShipIndex >= SHIP_SIZES.length) return;
+                
+                const size = SHIP_SIZES[currentShipIndex];
+                const isValid = canPlaceShip(playerBoard, row, col, size, currentOrientation);
+                
+                if (currentOrientation === 'horizontal') {
+                    for (let i = 0; i < size; i++) {
+                        if (col + i < BOARD_SIZE) {
+                            const cell = playerBoardEl.querySelector(`[data-row="${row}"][data-col="${col + i}"]`);
+                            if (cell) {
+                                cell.classList.add(isValid ? 'placing-valid' : 'placing-invalid');
+                            }
+                        }
+                    }
+                } else {
+                    for (let i = 0; i < size; i++) {
+                        if (row + i < BOARD_SIZE) {
+                            const cell = playerBoardEl.querySelector(`[data-row="${row + i}"][data-col="${col}"]`);
+                            if (cell) {
+                                cell.classList.add(isValid ? 'placing-valid' : 'placing-invalid');
+                            }
+                        }
+                    }
+                }
+            }
+            
+            function renderBoard(board, element, hideShips = false) {
+                element.innerHTML = '';
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.dataset.row = r;
+                        cell.dataset.col = c;
+                        
+                        const cellState = board[r][c];
+                        if (cellState === 'ship') {
+                            cell.classList.add('ship');
+                        } else if (cellState === 'hit') {
+                            cell.classList.add('hit');
+                        } else if (cellState === 'miss') {
+                            cell.classList.add('miss');
+                        }
+                        
+                        element.appendChild(cell);
+                    }
+                }
+            }
+            
+            function resetPlacement() {
+                playerBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill('empty'));
+                currentShipIndex = 0;
+                renderBoard(playerBoard, playerBoardEl, false);
+                updateShipsLeft();
+                clearHighlights();
+                addMessage('🔄 Расстановка сброшена. Можно начинать заново.');
+            }
+            
+            function randomPlacement() {
+                playerBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill('empty'));
+                
+                const sizes = [...SHIP_SIZES];
+                for (const size of sizes) {
+                    let placed = false;
+                    let attempts = 0;
+                    while (!placed && attempts < 2000) {
+                        const horizontal = Math.random() < 0.5;
+                        const row = Math.floor(Math.random() * BOARD_SIZE);
+                        const col = Math.floor(Math.random() * BOARD_SIZE);
+                        const orientation = horizontal ? 'horizontal' : 'vertical';
+                        
+                        if (canPlaceShip(playerBoard, row, col, size, orientation)) {
+                            placeShip(playerBoard, row, col, size, orientation);
+                            placed = true;
+                        }
+                        attempts++;
+                    }
+                }
+                
+                currentShipIndex = SHIP_SIZES.length;
+                renderBoard(playerBoard, playerBoardEl, false);
+                updateShipsLeft();
+                addMessage('🎲 Корабли расставлены случайным образом');
+            }
+            
+            function startGame() {
+                if (currentShipIndex < SHIP_SIZES.length) {
+                    addMessage('⚠️ Сначала поставьте все корабли!');
+                    return;
+                }
+                
+                isPlacingMode = false;
+                
+                // Расставляем корабли компьютера
+                computerBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill('empty'));
+                const sizes = [...SHIP_SIZES];
+                for (const size of sizes) {
+                    let placed = false;
+                    let attempts = 0;
+                    while (!placed && attempts < 2000) {
+                        const horizontal = Math.random() < 0.5;
+                        const row = Math.floor(Math.random() * BOARD_SIZE);
+                        const col = Math.floor(Math.random() * BOARD_SIZE);
+                        const orientation = horizontal ? 'horizontal' : 'vertical';
+                        
+                        if (canPlaceShip(computerBoard, row, col, size, orientation)) {
+                            placeShip(computerBoard, row, col, size, orientation);
+                            placed = true;
+                        }
+                        attempts++;
+                    }
+                }
+                
+                renderBoard(playerBoard, playerBoardEl, false);
+                renderBoard(computerBoard, computerBoardEl, true);
+                
+                playerTurn = true;
+                gameOver = false;
+                
+                // Сброс состояний бота
+                botTargetStack = [];
+                botLastHit = null;
+                botCurrentDirection = null;
+                
+                addMessage(`⚔️ Битва началась! Сложность: ${getDifficultyName()}`);
+                statusEl.innerText = '⚓ Ваш ход';
+                
+                placementPanel.style.display = 'none';
+                updateTurnIndicators();
+            }
+            
+            function getDifficultyName() {
+                switch(difficulty) {
+                    case 'easy': return 'Легкая';
+                    case 'hard': return 'Сложная';
+                    default: return 'Средняя';
+                }
+            }
+            
+            function handlePlacement(row, col) {
+                if (currentShipIndex >= SHIP_SIZES.length) return;
+                
+                const size = SHIP_SIZES[currentShipIndex];
+                
+                if (canPlaceShip(playerBoard, row, col, size, currentOrientation)) {
+                    placeShip(playerBoard, row, col, size, currentOrientation);
+                    currentShipIndex++;
+                    
+                    renderBoard(playerBoard, playerBoardEl, false);
+                    updateShipsLeft();
+                    clearHighlights();
+                    
+                    const colLetter = String.fromCharCode(65 + col);
+                    const rowNumber = row + 1;
+                    
+                    const sizeText = {
+                        4: 'Четырёхпалубный',
+                        3: 'Трёхпалубный',
+                        2: 'Двухпалубный',
+                        1: 'Однопалубный'
+                    };
+                    addMessage(`🚢 ${sizeText[size]} корабль поставлен на ${colLetter}${rowNumber}`);
+                } else {
+                    addMessage('❌ Нельзя поставить корабль здесь! Корабли не должны касаться друг друга.');
+                }
+            }
+            
+            function isShipDestroyed(board, row, col) {
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        const r = row + dr;
+                        const c = col + dc;
+                        if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                            if (board[r][c] === 'ship') return false;
+                        }
+                    }
+                }
+                return true;
+            }
+            
+            function addAdjacentCells(row, col) {
+                const directions = [
+                    {dr: -1, dc: 0},
+                    {dr: 1, dc: 0},
+                    {dr: 0, dc: -1},
+                    {dr: 0, dc: 1}
+                ];
+                
+                for (const dir of directions) {
+                    const r = row + dir.dr;
+                    const c = col + dir.dc;
+                    
+                    if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                        if (playerBoard[r][c] !== 'hit' && playerBoard[r][c] !== 'miss') {
+                            const exists = botTargetStack.some(item => item.r === r && item.c === c);
+                            if (!exists) {
+                                botTargetStack.push({r, c});
+                            }
+                        }
+                    }
+                }
+            }
+            
+            function resetBotSearch() {
+                botTargetStack = [];
+                botLastHit = null;
+                botCurrentDirection = null;
+            }
+            
+            function getRandomShipPhrase(isPlayer, isKill) {
+                if (isPlayer) {
+                    const phrases = [
+                        "🔥 Прямое попадание!",
+                        "💥 Враг горит!",
+                        "⚡ Отличный выстрел!",
+                        "🎯 Точно в цель!",
+                        "💢 Корабль противника повреждён!"
+                    ];
+                    const killPhrases = [
+                        "💀 Вражеский корабль уничтожен!",
+                        "⚰️ Противник пошёл ко дну!",
+                        "🏴‍☠️ Враг потерял судно!",
+                        "💦 Корабль противника затонул!",
+                        "👏 Отличная работа, корабль уничтожен!"
+                    ];
+                    return isKill ? killPhrases[Math.floor(Math.random() * killPhrases.length)] : 
+                                   phrases[Math.floor(Math.random() * phrases.length)];
+                } else {
+                    const phrases = [
+                        "😖 Враг попал в вас!",
+                        "💢 Наше судно повреждено!",
+                        "🔥 Пробоина!",
+                        "⚡ Враг атакует!",
+                        "💥 Попадание по нашему кораблю!"
+                    ];
+                    const killPhrases = [
+                        "😭 Наш корабль уничтожен!",
+                        "💔 Враг потопил наше судно...",
+                        "⚰️ Мы потеряли корабль!",
+                        "🌊 Наш корабль идёт ко дну!",
+                        "😱 Прямое попадание, корабль потерян!"
+                    ];
+                    return isKill ? killPhrases[Math.floor(Math.random() * killPhrases.length)] : 
+                                   phrases[Math.floor(Math.random() * phrases.length)];
+                }
+            }
+            
+            function computerMove() {
+                if (gameOver) return;
+                
+                let targetRow, targetCol;
+                
+                // Разная логика для разных уровней сложности
+                if (difficulty === 'easy') {
+                    // Легкий бот: случайные выстрелы, иногда "забывает" про подбитые корабли
+                    if (Math.random() < 0.3) { // 30% шанс забыть про подбитый корабль
+                        botTargetStack = [];
+                    }
+                }
+                
+                if (difficulty === 'hard' && botLastHit && !botCurrentDirection) {
+                    // Сложный бот: анализирует направление корабля
+                    analyzeShipDirection();
+                }
+                
+                if (botTargetStack.length > 0) {
+                    const target = botTargetStack.shift();
+                    targetRow = target.r;
+                    targetCol = target.c;
+                } else {
+                    let available = [];
+                    for (let r = 0; r < BOARD_SIZE; r++) {
+                        for (let c = 0; c < BOARD_SIZE; c++) {
+                            if (playerBoard[r][c] !== 'hit' && playerBoard[r][c] !== 'miss') {
+                                if (difficulty === 'hard') {
+                                    // Сложный бот: предпочитает клетки с четными координатами (более эффективный поиск)
+                                    if ((r + c) % 2 === 0) {
+                                        available.unshift({r, c});
+                                    } else {
+                                        available.push({r, c});
+                                    }
+                                } else {
+                                    available.push({r, c});
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (available.length === 0) return;
+                    
+                    const randomIndex = Math.floor(Math.random() * available.length);
+                    targetRow = available[randomIndex].r;
+                    targetCol = available[randomIndex].c;
+                }
+                
+                const wasShip = playerBoard[targetRow][targetCol] === 'ship';
+                const wasKill = wasShip && isShipDestroyed(playerBoard, targetRow, targetCol);
+                
+                const colLetter = String.fromCharCode(65 + targetCol);
+                const rowNumber = targetRow + 1;
+                
+                if (wasShip) {
+                    playerBoard[targetRow][targetCol] = 'hit';
+                    
+                    if (difficulty !== 'easy') { // Средний и сложный ищут вокруг
+                        addAdjacentCells(targetRow, targetCol);
+                        botLastHit = {r: targetRow, c: targetCol};
+                    }
+                    
+                    const message = getRandomShipPhrase(false, wasKill);
+                    addMessage(`🤖 Бот: ${message} (${colLetter}${rowNumber})`);
+                    statusEl.innerText = '💥 Бот атакует!';
+                    
+                    if (wasKill) {
+                        resetBotSearch();
+                    }
+                } else {
+                    playerBoard[targetRow][targetCol] = 'miss';
+                    addMessage(`🤖 Бот: 💧 Промах по координатам ${colLetter}${rowNumber}`);
+                    statusEl.innerText = '🌊 Бот промахнулся';
+                    
+                    // Легкий бот иногда пропускает ход
+                    if (difficulty === 'easy' && Math.random() < 0.1) {
+                        addMessage('🤖 Бот: 😴 (зевает и пропускает ход)');
+                        playerTurn = true;
+                        statusEl.innerText = '⚓ Ваш ход (бот пропустил)';
+                        renderBoard(playerBoard, playerBoardEl, false);
+                        updateTurnIndicators();
+                        return;
+                    }
+                }
+                
+                renderBoard(playerBoard, playerBoardEl, false);
+                
+                if (checkWin(playerBoard)) {
+                    gameOver = true;
+                    addMessage(`💀 Бот уничтожил ваш флот! Поражение...`);
+                    statusEl.innerText = '🤖 Бот победил!';
+                    updateTurnIndicators();
+                    return;
+                }
+                
+                if (!wasShip) {
+                    playerTurn = true;
+                    statusEl.innerText = '⚓ Ваш ход';
+                } else {
+                    setTimeout(() => {
+                        if (!gameOver && !playerTurn) {
+                            computerMove();
+                        }
+                    }, 600);
+                }
+                
+                updateTurnIndicators();
+            }
+            
+            function analyzeShipDirection() {
+                // Для сложного бота: определение направления корабля
+            }
+            
+            function checkWin(board) {
+                for (let r = 0; r < BOARD_SIZE; r++) {
+                    for (let c = 0; c < BOARD_SIZE; c++) {
+                        if (board[r][c] === 'ship') return false;
+                    }
+                }
+                return true;
+            }
+            
+            function handlePlayerShot(row, col) {
+                if (!playerTurn || gameOver) return;
+                
+                const cellState = computerBoard[row][col];
+                if (cellState === 'hit' || cellState === 'miss') {
+                    addMessage(`⚠️ Вы уже стреляли сюда!`);
+                    return;
+                }
+                
+                const wasShip = cellState === 'ship';
+                const wasKill = wasShip && isShipDestroyed(computerBoard, row, col);
+                
+                const colLetter = String.fromCharCode(65 + col);
+                const rowNumber = row + 1;
+                
+                let hitShip = false;
+                if (wasShip) {
+                    computerBoard[row][col] = 'hit';
+                    hitShip = true;
+                    
+                    const message = getRandomShipPhrase(true, wasKill);
+                    addMessage(`👤 Вы: ${message} (${colLetter}${rowNumber})`);
+                    statusEl.innerText = '🔥 Попадание! Ещё выстрел!';
+                } else {
+                    computerBoard[row][col] = 'miss';
+                    addMessage(`👤 Вы: 💧 Промах по координатам ${colLetter}${rowNumber}`);
+                    statusEl.innerText = '💧 Промах... Ход противника';
+                    playerTurn = false;
+                }
+                
+                renderBoard(computerBoard, computerBoardEl, true);
+                
+                if (checkWin(computerBoard)) {
+                    gameOver = true;
+                    addMessage(`🏆 ПОБЕДА! Вы уничтожили флот противника!`);
+                    statusEl.innerText = '🏆 Победа!';
+                    updateTurnIndicators();
+                    return;
+                }
+                
+                if (hitShip) {
+                    playerTurn = true;
+                } else {
+                    setTimeout(() => {
+                        if (!gameOver && !playerTurn) {
+                            computerMove();
+                        }
+                    }, 450);
+                }
+                
+                updateTurnIndicators();
+            }
+            
+            function resetGame() {
+                playerBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill('empty'));
+                computerBoard = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill('empty'));
+                
+                currentShipIndex = 0;
+                isPlacingMode = true;
+                playerTurn = true;
+                gameOver = false;
+                
+                resetBotSearch();
+                
+                placementPanel.style.display = 'flex';
+                
+                messageHistory = [];
+                
+                renderBoard(playerBoard, playerBoardEl, false);
+                renderBoard(computerBoard, computerBoardEl, true);
+                
+                updateShipsLeft();
+                updateTurnIndicators();
+                addMessage('🎮 Новая игра! Расставьте корабли на своей доске.');
+                addMessage(`🤖 Уровень сложности: ${getDifficultyName()}`);
+            }
+            
+            // Обработчики событий
+            
+            playerBoardEl.addEventListener('mousemove', (e) => {
+                if (!isPlacingMode) return;
+                const cell = e.target.closest('.cell');
+                if (!cell) return;
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                highlightOnHover(row, col);
+            });
+            
+            playerBoardEl.addEventListener('mouseleave', () => {
+                clearHighlights();
+            });
+            
+            playerBoardEl.addEventListener('click', (e) => {
+                const cell = e.target.closest('.cell');
+                if (!cell) return;
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                if (isPlacingMode) {
+                    handlePlacement(row, col);
+                }
+            });
+            
+            computerBoardEl.addEventListener('click', (e) => {
+                if (isPlacingMode) {
+                    addMessage('⚠️ Сначала расставьте корабли и начните игру!');
+                    return;
+                }
+                
+                const cell = e.target.closest('.cell');
+                if (!cell) return;
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                
+                if (gameOver) {
+                    addMessage('🎮 Игра окончена. Начните новую игру.');
+                    return;
+                }
+                
+                if (!playerTurn) {
+                    addMessage('⏳ Ожидайте хода противника...');
+                    return;
+                }
+                
+                handlePlayerShot(row, col);
+            });
+            
+            // Переключение ориентации
+            horizontalBtn.addEventListener('click', () => {
+                currentOrientation = 'horizontal';
+                horizontalBtn.classList.add('active');
+                verticalBtn.classList.remove('active');
+                clearHighlights();
+            });
+            
+            verticalBtn.addEventListener('click', () => {
+                currentOrientation = 'vertical';
+                verticalBtn.classList.add('active');
+                horizontalBtn.classList.remove('active');
+                clearHighlights();
+            });
+            
+            // Выбор сложности
+            difficultyEasy.addEventListener('click', () => {
+                difficulty = 'easy';
+                difficultyEasy.classList.add('active');
+                difficultyMedium.classList.remove('active');
+                difficultyHard.classList.remove('active');
+                addMessage('🌊 Установлен легкий уровень сложности. Бот будет ошибаться.');
+            });
+            
+            difficultyMedium.addEventListener('click', () => {
+                difficulty = 'medium';
+                difficultyMedium.classList.add('active');
+                difficultyEasy.classList.remove('active');
+                difficultyHard.classList.remove('active');
+                addMessage('🌊 Установлен средний уровень сложности.');
+            });
+            
+            difficultyHard.addEventListener('click', () => {
+                difficulty = 'hard';
+                difficultyHard.classList.add('active');
+                difficultyEasy.classList.remove('active');
+                difficultyMedium.classList.remove('active');
+                addMessage('🌊 Установлен сложный уровень сложности. Бот будет опасным противником!');
+            });
+            
+            randomPlacementBtn.addEventListener('click', randomPlacement);
+            resetPlacementBtn.addEventListener('click', resetPlacement);
+            startGameBtn.addEventListener('click', startGame);
+            resetBtn.addEventListener('click', resetGame);
+            
+            // Начальная отрисовка
+            renderBoard(playerBoard, playerBoardEl, false);
+            renderBoard(computerBoard, computerBoardEl, true);
+            updateShipsLeft();
+            addMessage('🎮 Добро пожаловать! Нажимай на клетки чтобы поставить корабли.');
+            addMessage('🤖 Можно выбрать уровень сложности бота.');
+        })();
+    </script>
+</body>
+</html>
